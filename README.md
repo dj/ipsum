@@ -23,6 +23,11 @@ For a full list of options
 ipsum --help
 ```
 
+## TODO
+- Implement an option to remove sentence delimiters from the output
+- Implement short flags
+- Input is assumed to contain sentence delimiters
+
 ## License
 Copyright (c) 2016 Daniel Jay Hartman
 
