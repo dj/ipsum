@@ -12,6 +12,7 @@ func main() {
 	// Read flags
 	setencesArg := flag.Int("sentences", 50, "Number of sentences to take from the input text")
 	paragraphsArg := flag.Int("paragraphs", 1, "Number of paragraphs to take form the input text")
+	wordsArg := flag.Int("words", 0, "Number of words per sentence to emit. Takes precedence over sentences.")
 	inputArg := flag.String("input", "", "Path to input text file (otherwise reads from stdin)")
 	outputArg := flag.String("output", "", "Path to output text file (otherwise prints to stdout)")
 	outputFmtArg := flag.String("fmt", "html", "Output file format. One of: html, txt")
@@ -29,36 +30,54 @@ func main() {
 		outputWriter = bufio.NewWriter(file)
 	}
 
-	// Read input from a file or stdout
+	// Create the scanner that reads from the input source
 	var scanner *bufio.Scanner
+
 	if *inputArg == "" {
+		// Read from stdin
 		scanner = bufio.NewScanner(os.Stdin)
 	} else {
+		// Read from file
 		file, err := os.Open(*inputArg)
 		if err != nil {
 			panic(err)
 		}
 		scanner = bufio.NewScanner(file)
 	}
-	scanner.Split(scanSentences)
 
-	// Read from the input and write to the output
-	for paragraphCount := 0; paragraphCount < *paragraphsArg; paragraphCount++ {
-		if *outputFmtArg == "html" {
-			outputWriter.WriteString("<p>")
-		}
-
-		for wordCount := 0; wordCount < *setencesArg; wordCount++ {
+	// Decide which scanner func to use.
+	if *wordsArg != 0 {
+		// Scan by words
+		scanner.Split(bufio.ScanWords)
+		for wordCount := 0; wordCount < *wordsArg; wordCount++ {
 			scanner.Scan()
-			outputWriter.WriteString(scanner.Text() + ".")
+			outputWriter.WriteString(scanner.Text() + " ")
 
 			if err := scanner.Err(); err != nil {
 				fmt.Fprintln(os.Stderr, "reading input:", err)
 			}
 		}
+	} else {
+		// Scan by sentences
+		scanner.Split(scanSentences)
+		// Read from the input and write to the output
+		for paragraphCount := 0; paragraphCount < *paragraphsArg; paragraphCount++ {
+			if *outputFmtArg == "html" {
+				outputWriter.WriteString("<p>")
+			}
 
-		if *outputFmtArg == "html" {
-			outputWriter.WriteString("</p> \n")
+			for sentenceCount := 0; sentenceCount < *setencesArg; sentenceCount++ {
+				scanner.Scan()
+				outputWriter.WriteString(scanner.Text() + ".")
+
+				if err := scanner.Err(); err != nil {
+					fmt.Fprintln(os.Stderr, "reading input:", err)
+				}
+			}
+
+			if *outputFmtArg == "html" {
+				outputWriter.WriteString("</p> \n")
+			}
 		}
 	}
 
